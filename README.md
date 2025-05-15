@@ -14,3 +14,20 @@ SnakeAssembly: Automated pipeline that will perform the following steps for each
   6. **BLASTn search** for the closest known phage genome
 
 SnakeInput.yaml: The input file where you will list your the names of your phage reads according to the example.
+
+# Dependencies
+
+| Tool                       | Purpose                                  | Install Source     |
+| -------------------------- | ---------------------------------------- | ------------------ |
+| `snakemake`                | Workflow management                      | `conda` / `pip`    |
+| `fastqc`                   | Quality control of raw and cleaned reads | `bioconda`         |
+| `bbmap`                    | Adapter trimming and mapping             | `bioconda`         |
+| `seqtk`                    | Subsampling reads                        | `bioconda`         |
+| `spades`                   | Genome assembly                          | `bioconda`         |
+| `samtools`                 | Manipulating `.sam`/`.bam` files         | `bioconda`         |
+| `pilon`                    | Genome polishing                         | `bioconda`         |
+| `blastn`                   | Finding closest reference genome         | `bioconda`         |
+| `entrez-direct` (`efetch`) | Downloading reference genome from NCBI   | `bioconda`         |
+| `ragtag`                   | Reordering genome to match reference     | `bioconda`         |
+| `biopython`                | For optional rotation scripting          | `pip` / `bioconda` |
+
