@@ -1,0 +1,20 @@
+#Wyman's Pipeline that's better than Ryan Cook's
+
+samples:
+  Myc4:
+    R1: Myc4_R1.fastq.gz
+    R2: Myc4_R2.fastq.gz
+  Entr2:
+    R1: Entr2_R1.fastq.gz
+    R2: Entr2_R2.fastq.gz
+
+
+
+fastqc_dir: fastqc_results
+cleaned_dir: cleaned_reads
+subsample_dir: subsampled_reads
+spades_dir: spades_results
+bbmap_dir: bbmap_results
+extract_dir: extracted_node
+pilon_dir: pilon_results
+

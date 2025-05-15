@@ -1,0 +1,234 @@
+configfile: "SnakeInput.yaml"
+
+SAMPLES = config["samples"]
+FASTQC_DIR = config["fastqc_dir"]
+CLEANED_DIR = config["cleaned_dir"]
+SUBSAMPLE_DIR = config["subsample_dir"]
+SPADES_DIR = config["spades_dir"]
+BBMAP_DIR = config["bbmap_dir"]
+EXTRACT_DIR = config.get("extract_dir", "phage_contigs")
+PILON_DIR = config["pilon_dir"]
+
+rule all:
+    input:
+        expand("{sample}/pilon_results/pilon_{sample}.fasta", sample=SAMPLES.keys()),
+        expand("{sample}/extracted_node/{sample}_contigs.fasta", sample=SAMPLES.keys()),
+        expand("{sample}/bbmap_results/{sample}_mapped.sam", sample=SAMPLES.keys()),
+        expand("{sample}/bbmap_results/{sample}_covstats.txt", sample=SAMPLES.keys()),
+        expand("{sample}/spades_results_{sample}/contigs.fasta", sample=SAMPLES.keys()),
+        expand("{sample}/subsampled_reads/sub_{sample}_R1.fq.gz", sample=SAMPLES.keys()),
+        expand("{sample}/subsampled_reads/sub_{sample}_R2.fq.gz", sample=SAMPLES.keys()),
+        expand("{sample}/cleaned_reads/clean_{sample}_R1.fq.gz", sample=SAMPLES.keys()),
+        expand("{sample}/cleaned_reads/clean_{sample}_R2.fq.gz", sample=SAMPLES.keys()),
+        expand("{sample}/fastqc_results/{sample}_R1_fastqc.html", sample=SAMPLES.keys()),
+        expand("{sample}/fastqc_results/{sample}_R2_fastqc.html", sample=SAMPLES.keys()),
+        expand("{sample}/fastqc_results/clean_{sample}_R1_fastqc.html", sample=SAMPLES.keys()),
+        expand("{sample}/fastqc_results/clean_{sample}_R2_fastqc.html", sample=SAMPLES.keys()),
+        expand("{sample}/reference/{sample}_rel.fasta", sample=SAMPLES.keys()),
+        expand("{sample}/reference/{sample}_rel.gbk", sample=SAMPLES.keys()),
+        expand("{sample}/reference/{sample}_rel.ffn", sample=SAMPLES.keys()),
+
+
+
+
+rule fastqc:
+    input:
+        r1 = lambda wc: SAMPLES[wc.sample]["R1"],
+        r2 = lambda wc: SAMPLES[wc.sample]["R2"]
+    output:
+        r1_html = f"{{sample}}/fastqc_results/{{sample}}_R1_fastqc.html",
+        r2_html = f"{{sample}}/fastqc_results/{{sample}}_R2_fastqc.html"
+    threads: 2
+    shell:
+        """
+        mkdir -p {wildcards.sample}/{FASTQC_DIR}
+        fastqc {input.r1} {input.r2} --outdir {wildcards.sample}/fastqc_results --threads {threads}
+        """
+
+
+
+rule clean:
+    input:
+        r1 = lambda wc: SAMPLES[wc.sample]["R1"],
+        r2 = lambda wc: SAMPLES[wc.sample]["R2"]
+    output:
+        r1_clean = f"{{sample}}/cleaned_reads/clean_{{sample}}_R1.fq.gz",
+        r2_clean = f"{{sample}}/cleaned_reads/clean_{{sample}}_R2.fq.gz"
+    threads: 4
+    shell:
+        """
+        mkdir -p {wildcards.sample}/{CLEANED_DIR}
+
+        bbmap/bbduk.sh in1={input.r1} in2={input.r2} \
+            out1=nophix_{wildcards.sample}_R1.fq.gz \
+            out2=nophix_{wildcards.sample}_R2.fq.gz \
+            ref=bbmap/resources/phix174_ill.ref.fa.gz \
+            k=31 hdist=1 stats=phiX_stats.txt
+
+        bbmap/bbduk.sh in1=nophix_{wildcards.sample}_R1.fq.gz \
+            in2=nophix_{wildcards.sample}_R2.fq.gz \
+            out1={output.r1_clean} out2={output.r2_clean} \
+            ref=bbmap/resources/adapters.fa \
+            ktrim=r hdist=1 tpe tbo minlen=100 qtrim=rl trimq=28
+
+	mv nophix_{wildcards.sample}_R1.fq.gz {wildcards.sample}/cleaned_reads
+	mv nophix_{wildcards.sample}_R2.fq.gz {wildcards.sample}/cleaned_reads
+	mv phiX_stats.txt {wildcards.sample}/cleaned_reads
+        """
+
+
+
+rule fastqc_cleaned:
+    input:
+        r1 = f"{{sample}}/cleaned_reads/clean_{{sample}}_R1.fq.gz",
+        r2 = f"{{sample}}/cleaned_reads/clean_{{sample}}_R2.fq.gz"
+    output:
+        r1_html = f"{{sample}}/fastqc_results/clean_{{sample}}_R1_fastqc.html",
+        r2_html = f"{{sample}}/fastqc_results/clean_{{sample}}_R2_fastqc.html"
+    threads: 4
+    shell:
+        """
+        fastqc {input.r1} {input.r2} --outdir {wildcards.sample}/fastqc_results --threads {threads}
+        """
+
+
+
+rule seqtk_subsample:
+    input:
+        r1 = f"{{sample}}/cleaned_reads/clean_{{sample}}_R1.fq.gz",
+        r2 = f"{{sample}}/cleaned_reads/clean_{{sample}}_R2.fq.gz"
+    output:
+        r1_sub = f"{{sample}}/subsampled_reads/sub_{{sample}}_R1.fq.gz",
+        r2_sub = f"{{sample}}/subsampled_reads/sub_{{sample}}_R2.fq.gz"
+    threads: 1
+    shell:
+        """
+        mkdir -p {wildcards.sample}/{SUBSAMPLE_DIR}
+        seqtk/seqtk sample -s100 {input.r1} 66667 | gzip > {output.r1_sub}
+        seqtk/seqtk sample -s100 {input.r2} 66667 | gzip > {output.r2_sub}
+        """
+
+
+rule spades_assemble:
+    input:
+        r1 = f"{{sample}}/subsampled_reads/sub_{{sample}}_R1.fq.gz",
+        r2 = f"{{sample}}/subsampled_reads/sub_{{sample}}_R2.fq.gz"
+    output:
+        contigs = f"{{sample}}/spades_results_{{sample}}/contigs.fasta"
+    threads: 8
+    shell:
+        """
+        mkdir -p {wildcards.sample}/spades_results_{wildcards.sample}
+        spades/bin/spades.py --only-assembler -1 {input.r1} -2 {input.r2} -o {wildcards.sample}/spades_results_{wildcards.sample} -m 1024 \
+            --threads {threads}
+        """
+
+
+
+rule assembly_validation:
+    input:
+        contigs = f"{{sample}}/spades_results_{{sample}}/contigs.fasta",
+        r1 = f"{{sample}}/subsampled_reads/sub_{{sample}}_R1.fq.gz",
+        r2 = f"{{sample}}/subsampled_reads/sub_{{sample}}_R2.fq.gz"
+    output:
+        sam = f"{{sample}}/bbmap_results/{{sample}}_mapped.sam",
+        stats = f"{{sample}}/bbmap_results/{{sample}}_covstats.txt"
+    threads: 4
+    shell:
+        """
+        mkdir -p {wildcards.sample}/{BBMAP_DIR}
+
+    	gunzip -c {input.r1} > sub_{wildcards.sample}_R1.fq
+    	gunzip -c {input.r2} > sub_{wildcards.sample}_R2.fq
+
+        bbmap/bbmap.sh ref={input.contigs} \
+            in1=sub_{wildcards.sample}_R1.fq in2=sub_{wildcards.sample}_R2.fq \
+            covstats={output.stats} \
+            out={output.sam} \
+            threads={threads}
+
+        gzip sub_{wildcards.sample}_R1.fq
+	gzip sub_{wildcards.sample}_R2.fq
+        rm sub_{wildcards.sample}_R1.fq.gz
+	rm sub_{wildcards.sample}_R2.fq.gz
+        """
+
+
+
+rule extract_node:
+    input:
+        contigs = f"{{sample}}/spades_results_{{sample}}/contigs.fasta"
+    output:
+        fasta = f"{{sample}}/extracted_node/{{sample}}_contigs.fasta"
+    shell:
+        """
+	mkdir -p {wildcards.sample}/{EXTRACT_DIR}
+
+        node=$(grep '>' {input.contigs} | head -n 1 | cut -d ' ' -f1)
+        sed -n "/$node/,/>/p" {input.contigs} | sed '$d' > {output.fasta}
+        """
+
+
+
+rule error_detection:
+    input:
+        contig = f"{{sample}}/extracted_node/{{sample}}_contigs.fasta",
+        sam = f"{{sample}}/bbmap_results/{{sample}}_mapped.sam"
+    output:
+        polished = f"{{sample}}/pilon_results/pilon_{{sample}}.fasta"
+    threads: 4
+    shell:
+        """
+        mkdir -p {wildcards.sample}/{PILON_DIR}
+
+        samtools view -bS -F4 {input.sam} | samtools sort -o {wildcards.sample}/pilon_results/{wildcards.sample}_sorted.bam
+        samtools index {wildcards.sample}/pilon_results/{wildcards.sample}_sorted.bam
+
+        pilon --genome {input.contig} \
+              --frags {wildcards.sample}/pilon_results/{wildcards.sample}_sorted.bam \
+              --output pilon_{wildcards.sample} \
+              --outdir {wildcards.sample}/pilon_results \
+              --threads {threads} \
+              --verbose --changes
+        """
+
+
+rule blast_reference:
+    input:
+        fasta = f"{{sample}}/pilon_results/pilon_{{sample}}.fasta"
+    output:
+        hits = f"{{sample}}/blast/{{sample}}_top_hits.txt"
+    params:
+        db = "ref_viruses_rep_genomes" 
+    shell:
+        """
+        mkdir -p {wildcards.sample}/blast
+        blastn -query {input.fasta} -db {params.db} -remote \
+            -outfmt '7 sacc pident length evalue bitscore' \
+            -max_target_seqs 3 \
+            -out {output.hits}
+        """
+
+
+rule fetch_reference:
+    input:
+        hits = f"{{sample}}/blast/{{sample}}_top_hits.txt"
+    output:
+        fasta = f"{{sample}}/reference/{{sample}}_rel.fasta",
+        gbk = f"{{sample}}/reference/{{sample}}_rel.gbk",
+        ffn = f"{{sample}}/reference/{{sample}}_rel.ffn"
+    shell:
+        """
+        mkdir -p {wildcards.sample}/reference
+
+        accession=$(cut -f1 {input.hits} | head -n1)
+
+        efetch -db nucleotide -id $accession -format fasta > {output.fasta}
+        efetch -db nucleotide -id $accession -format gb > {output.gbk}
+        efetch -db nucleotide -id $accession -format fasta_cds_na > {output.ffn}
+        """
+
+
+
+
+
