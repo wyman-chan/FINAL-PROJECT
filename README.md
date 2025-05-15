@@ -6,11 +6,11 @@ This Snakemake pipeline automates the process of assembling and polishing of pha
 # Contents
 SnakeAssembly: Automated pipeline that will perform the following steps for each sample:
 
-  1. **Quality Control** of raw reads using FastQC
-  2. **Adapter and contaminant trimming** using BBDuk
-  3. **Subsampling** with seqtk
-  4. **Genome assembly** using SPAdes
-  5. **Read mapping and polishing** using BBMap + Pilon
+  1. **Quality Control** of raw reads 
+  2. **Adapter and contaminant trimming** 
+  3. **Subsampling** 
+  4. **Genome assembly** 
+  5. **Read mapping and polishing** 
   6. **BLASTn search** for the closest known phage genome
 
 SnakeInput.yaml: The input file where you will list your the names of your phage reads according to the example.
