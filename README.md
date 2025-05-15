@@ -31,3 +31,19 @@ SnakeInput.yaml: The input file where you will list your the names of your phage
 | `ragtag`                   | Reordering genome to match reference     | `bioconda`         |
 | `biopython`                | For optional rotation scripting          | `pip` / `bioconda` |
 
+# Quick Start
+Clone the repository
+`git clone https://github.com/wyman-chan/FINAL-PROJECT.git`
+
+`cd FINAL-PROJECT`
+
+Set up the Conda environment
+`conda create -n snakemake_env -c bioconda -c conda-forge snakemake`
+
+`conda activate snakemake_env`
+
+Run the program
+`snakemake -s SnakeAssembly`
+
+
+
