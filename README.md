@@ -1,7 +1,7 @@
 # Biol-668-Final-Project
 
 # Overview
-This Snakemake pipeline automates the process of assembling and polishing of phage genomes from Illumina sequencing reads.
+This Snakemake pipeline automates the process of assembling and polishing phage genomes from raw Illumina sequencing reads.
 
 # Contents
 SnakeAssembly: Automated pipeline that will perform the following steps for each sample:
