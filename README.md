@@ -47,6 +47,7 @@ Set up the Conda environment
 
 
 Run the program
+
 `snakemake -s SnakeAssembly`
 
 
