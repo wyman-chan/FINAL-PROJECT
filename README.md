@@ -51,4 +51,13 @@ Run the program
 `snakemake -s SnakeAssembly`
 
 
+# Example
+FASTQC
+![CCF85A0D-837A-43BE-93F0-0B631E4E2B4A_1_105_c](https://github.com/user-attachments/assets/9eb804d1-cb36-48ea-85d9-93eb0d706c31)
+
+SPAdes (Bandage visualization)
+![60C46CFE-D7D1-4767-A710-AEB297106723_1_105_c](https://github.com/user-attachments/assets/bfe1256e-ad55-4fde-96f4-428f0ea4ba02)
+
+Blastn (website visualization)
+![73096B9C-9AD6-4999-988D-8B4D686EAF02_1_105_c](https://github.com/user-attachments/assets/ecc89bc1-a9a5-4fd5-bd17-029e1c9a1543)
 
