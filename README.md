@@ -37,10 +37,12 @@ Clone the repository
 
 `cd FINAL-PROJECT`
 
+
 Set up the Conda environment
 `conda create -n snakemake_env -c bioconda -c conda-forge snakemake`
 
 `conda activate snakemake_env`
+
 
 Run the program
 `snakemake -s SnakeAssembly`
